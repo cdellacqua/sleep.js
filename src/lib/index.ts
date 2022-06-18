@@ -46,11 +46,19 @@ const noop = () => undefined as void;
  * its usual limit of 2147483647 (0x7fffffff, ~24.8 days). This implementation
  * will take care of huge values by using setTimeout multiple times if needed.
  *
+ * Note: if the delay is 0 the returned Promise will be already resolved.
+ *
  * @param ms a delay in milliseconds.
  * @returns a {@link SleepPromise}
  */
 export const sleep = (ms: number): SleepPromise => {
 	const normalizedMs = Math.max(0, Math.ceil(ms));
+
+	if (normalizedMs === 0) {
+		const promise = Promise.resolve();
+		(promise as SleepPromise).skip = noop;
+		return promise as SleepPromise;
+	}
 
 	let id: ReturnType<typeof patchedSetTimeout> | undefined;
 	let resolve = noop;

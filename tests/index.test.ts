@@ -51,4 +51,15 @@ describe('sleep', () => {
 		setTimeoutSandbox.restore();
 		done();
 	});
+	it('tests a delay of 0', (done) => {
+		let actual = 0;
+		const sleepPromise = sleep(0);
+		sleepPromise.then(() => {
+			actual = 1;
+		}, done);
+		setImmediate(() => {
+			expect(actual).to.eq(1);
+			done();
+		});
+	});
 });
