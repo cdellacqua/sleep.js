@@ -39,6 +39,8 @@ Note: although using setTimeout under the hood, you can pass a value greater tha
 its usual limit of 2147483647 (0x7fffffff, ~24.8 days). This implementation
 will take care of huge values by using setTimeout multiple times if needed.
 
+Note: if the delay is 0 the returned Promise will be already resolved.
+
 #### Parameters
 
 | Name | Type | Description |
@@ -53,4 +55,4 @@ a [SleepPromise](README.md#sleeppromise)
 
 #### Defined in
 
-[index.ts:52](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L52)
+[index.ts:54](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L54)
