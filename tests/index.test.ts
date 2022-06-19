@@ -62,4 +62,8 @@ describe('sleep', () => {
 			done();
 		});
 	});
+	it('tests the skip method on a delay of 0', () => {
+		const sleepPromise = sleep(0);
+		expect(() => sleepPromise.skip()).not.to.throw();
+	});
 });
