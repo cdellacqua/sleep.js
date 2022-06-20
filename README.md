@@ -48,3 +48,19 @@ async function example() {
 	console.log('see you in half a sec!');
 }
 ```
+
+Skip timeout after 500ms, rejecting the promise:
+
+```ts
+import {sleep} from '@cdellacqua/sleep';
+
+async function example() {
+	const sleepPromise = sleep(1000);
+	setTimeout(() => sleepPromise.skip('ops!'), 500);
+	try {
+		await sleepPromise;
+	} catch (err) {
+		console.log('see you in half a sec!');
+	}
+}
+```

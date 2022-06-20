@@ -30,8 +30,13 @@ const patchedClearTimeout = (timeoutContext: TimeoutContext) => clearTimeout(tim
 export type SleepPromise = Promise<void> & {
 	/**
 	 * Skip the specified timeout and resolve early.
+	 *
+	 * If an error is passed, the pending promise will be rejected with it instead
+	 * of being resolved.
+	 *
+	 * @param err (optional) if passed, rejects the pending Promise, otherwise it will be resolved early.
 	 */
-	skip(): void;
+	skip(err?: unknown): void;
 };
 
 const noop = () => undefined as void;
@@ -40,7 +45,7 @@ const noop = () => undefined as void;
  * Return a Promise that resolves after the specified delay.
  *
  * The returned Promise provides a `skip` method that can
- * be used to resolve early.
+ * be used to resolve (or reject) early.
  *
  * Note: although using setTimeout under the hood, you can pass a value greater than
  * its usual limit of 2147483647 (0x7fffffff, ~24.8 days). This implementation
@@ -62,18 +67,24 @@ export const sleep = (ms: number): SleepPromise => {
 
 	let id: ReturnType<typeof patchedSetTimeout> | undefined;
 	let resolve = noop;
-	const promise = new Promise<void>((res) => {
+	let reject: (err: unknown) => void = noop;
+	const promise = new Promise<void>((res, rej) => {
 		resolve = res;
+		reject = rej;
 		id = patchedSetTimeout(() => {
 			id = undefined;
 			resolve();
 		}, normalizedMs);
 	});
-	(promise as SleepPromise).skip = () => {
+	(promise as SleepPromise).skip = (err?: unknown) => {
 		if (id !== undefined) {
 			patchedClearTimeout(id);
 			id = undefined;
-			resolve();
+			if (err !== undefined) {
+				reject(err);
+			} else {
+				resolve();
+			}
 		}
 	};
 	return promise as SleepPromise;

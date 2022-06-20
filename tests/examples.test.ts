@@ -37,4 +37,20 @@ describe('examples', () => {
 			done();
 		}, 75);
 	});
+	it('readme 3', (done) => {
+		let actual = '';
+		(async () => {
+			const sleepPromise = sleep(100);
+			setTimeout(() => sleepPromise.skip('ops!'), 50);
+			try {
+				await sleepPromise;
+			} catch (err) {
+				actual = 'see you in half a sec!';
+			}
+		})().catch(done);
+		setTimeout(() => {
+			expect(actual).to.eq('see you in half a sec!');
+			done();
+		}, 75);
+	});
 });

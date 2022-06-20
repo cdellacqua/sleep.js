@@ -1,7 +1,9 @@
 import spies from 'chai-spies';
+import chaiAsPromised from 'chai-as-promised';
 import chai, {expect} from 'chai';
-import {sleep} from '../src/lib/index';
+import {sleep} from '../src/lib';
 
+chai.use(chaiAsPromised);
 chai.use(spies);
 
 describe('sleep', () => {
@@ -62,8 +64,14 @@ describe('sleep', () => {
 			done();
 		});
 	});
-	it('tests the skip method on a delay of 0', () => {
+	it('tests the skip method on a delay of 0', async () => {
 		const sleepPromise = sleep(0);
 		expect(() => sleepPromise.skip()).not.to.throw();
+		await expect(sleepPromise).to.eventually.not.be.rejected;
+	});
+	it('tests the skip method passing an error message', async () => {
+		const sleepPromise = sleep(10);
+		sleepPromise.skip('skip this!');
+		await expect(sleepPromise).to.eventually.be.rejected;
 	});
 });
