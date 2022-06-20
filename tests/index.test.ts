@@ -69,9 +69,14 @@ describe('sleep', () => {
 		expect(() => sleepPromise.skip()).not.to.throw();
 		await expect(sleepPromise).to.eventually.not.be.rejected;
 	});
-	it('tests the skip method passing an error message', async () => {
+	it('tests the abort method', async () => {
 		const sleepPromise = sleep(10);
-		sleepPromise.skip('skip this!');
-		await expect(sleepPromise).to.eventually.be.rejected;
+		sleepPromise.abort();
+		await expect(sleepPromise).to.eventually.be.rejectedWith();
+	});
+	it('tests the abort method passing an error message', async () => {
+		const sleepPromise = sleep(10);
+		sleepPromise.abort('skip this!');
+		await expect(sleepPromise).to.eventually.be.rejectedWith('skip this!');
 	});
 });

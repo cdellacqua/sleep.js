@@ -41,7 +41,7 @@ describe('examples', () => {
 		let actual = '';
 		(async () => {
 			const sleepPromise = sleep(100);
-			setTimeout(() => sleepPromise.skip('ops!'), 50);
+			setTimeout(() => sleepPromise.abort('ops!'), 50);
 			try {
 				await sleepPromise;
 			} catch (err) {

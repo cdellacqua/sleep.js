@@ -16,7 +16,7 @@
 
 ### SleepPromise
 
-Ƭ **SleepPromise**: `Promise`<`void`\> & { `skip`: (`err?`: `unknown`) => `void`  }
+Ƭ **SleepPromise**: `Promise`<`void`\> & { `abort`: (`err?`: `unknown`) => `void` ; `skip`: () => `void`  }
 
 A Promise containing a skip method.
 
@@ -55,4 +55,4 @@ a [SleepPromise](README.md#sleeppromise)
 
 #### Defined in
 
-[index.ts:59](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L59)
+[index.ts:60](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L60)

@@ -29,14 +29,15 @@ const patchedClearTimeout = (timeoutContext: TimeoutContext) => clearTimeout(tim
  */
 export type SleepPromise = Promise<void> & {
 	/**
-	 * Skip the specified timeout and resolve early.
-	 *
-	 * If an error is passed, the pending promise will be rejected with it instead
-	 * of being resolved.
-	 *
-	 * @param err (optional) if passed, rejects the pending Promise, otherwise it will be resolved early.
+	 * Skip the specified timeout by resolving early.
 	 */
-	skip(err?: unknown): void;
+	skip(): void;
+	/**
+	 * Skip the specified timeout by rejecting early.
+	 *
+	 * @param err (optional) the rejection reason.
+	 */
+	abort(err?: unknown): void;
 };
 
 const noop = () => undefined as void;
@@ -76,15 +77,18 @@ export const sleep = (ms: number): SleepPromise => {
 			resolve();
 		}, normalizedMs);
 	});
-	(promise as SleepPromise).skip = (err?: unknown) => {
+	(promise as SleepPromise).skip = () => {
 		if (id !== undefined) {
 			patchedClearTimeout(id);
 			id = undefined;
-			if (err !== undefined) {
-				reject(err);
-			} else {
-				resolve();
-			}
+			resolve();
+		}
+	};
+	(promise as SleepPromise).abort = (err?: unknown) => {
+		if (id !== undefined) {
+			patchedClearTimeout(id);
+			id = undefined;
+			reject(err);
 		}
 	};
 	return promise as SleepPromise;
