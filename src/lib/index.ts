@@ -64,13 +64,16 @@ export const sleep = (ms: number): SleepPromise => {
 	let resolve = noop;
 	const promise = new Promise<void>((res) => {
 		resolve = res;
-		id = patchedSetTimeout(resolve, normalizedMs);
+		id = patchedSetTimeout(() => {
+			id = undefined;
+			resolve();
+		}, normalizedMs);
 	});
 	(promise as SleepPromise).skip = () => {
 		if (id !== undefined) {
 			patchedClearTimeout(id);
+			id = undefined;
 			resolve();
-			resolve = noop;
 		}
 	};
 	return promise as SleepPromise;
