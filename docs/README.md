@@ -16,7 +16,7 @@
 
 ### SleepPromise
 
-Ƭ **SleepPromise**: `Promise`<`void`\> & { `skip`: () => `void`  }
+Ƭ **SleepPromise**: `Promise`<`void`\> & { `skip`: (`err?`: `unknown`) => `void`  }
 
 A Promise containing a skip method.
 
@@ -33,7 +33,7 @@ A Promise containing a skip method.
 Return a Promise that resolves after the specified delay.
 
 The returned Promise provides a `skip` method that can
-be used to resolve early.
+be used to resolve (or reject) early.
 
 Note: although using setTimeout under the hood, you can pass a value greater than
 its usual limit of 2147483647 (0x7fffffff, ~24.8 days). This implementation
@@ -55,4 +55,4 @@ a [SleepPromise](README.md#sleeppromise)
 
 #### Defined in
 
-[index.ts:54](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L54)
+[index.ts:59](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L59)
