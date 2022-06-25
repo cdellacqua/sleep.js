@@ -1,4 +1,4 @@
-import {HastyPromise, makeHastyPromise} from 'hasty-promise';
+import {ReadonlySignal} from '@cdellacqua/signals';
 
 const maxSupportedTimeout = 0x7fffffff;
 
@@ -26,67 +26,81 @@ const patchedSetTimeout = (
 
 const patchedClearTimeout = (timeoutContext: TimeoutContext) => clearTimeout(timeoutContext.id);
 
+/**
+ * Any viable type that may be used by a setTimeout implementation.
+ */
 export type TimeoutIdentifier = string | number | boolean | symbol | bigint | object | null;
 
+/**
+ * A basic timeout API must provide a setTimeout and a clearTimeout function.
+ */
+export type TimeoutAPI<T extends TimeoutIdentifier> = {
+	setTimeout(callback: () => void, ms: number): T;
+	clearTimeout(timeoutId: T): void;
+};
+
+/**
+ * A configuration object for the `sleep` function.
+ */
 export type SleepConfig<T extends TimeoutIdentifier> = {
-	setTimeout: (callback: () => void, ms: number) => T;
-	clearTimeout: (timeoutId: T) => void;
+	/**
+	 * A [ReadonlySignal](https://www.npmjs.com/package/@cdellacqua/signals)
+	 * that can be used to resolve (or reject) the promise before the specified
+	 * delay has passed.
+	 *
+	 * Calling `emit` without any parameter will resolve the promise, while
+	 * calling it with an Error instance will reject it with the passed Error.
+	 */
+	hurry$?: ReadonlySignal<void | Error>;
+	/**
+	 * A custom timeout API that provides setTimeout and clearTimeout.
+	 */
+	timeoutApi?: TimeoutAPI<T>;
 };
 
 /**
  * Return a Promise that resolves after the specified delay.
  *
- * The returned Promise provides a `hurry` method that can
- * be used to resolve or reject early. Calling `hurry` without
- * any parameter will resolve the promise, while calling it with
- * an Error instance will reject it with the given Error.
+ * The second parameter is a `config` object that can contain a custom timeout API,
+ * providing setTimeout and clearTimeout functions,
+ * and a [ReadonlySignal](https://www.npmjs.com/package/@cdellacqua/signals) that can be used
+ * to cancel the sleep promise before its natural termination.
  *
- * This overload takes an `overrides` object as its second parameter
- * containing custom setTimeout and clearTimeout functions. This
- * can be useful in tests or in scenarios where you would want
+ * Overriding the timeout API can be useful in tests or in scenarios where you would want
  * to use more precise timing than what setTimeout can offer.
+ *
+ * Calling `emit` without any parameter will resolve the promise, while
+ * calling it with an Error instance will reject it with the passed Error.
  *
  * Note: if the delay is 0 the returned Promise will be already resolved.
  *
  * @param ms a delay in milliseconds.
- * @param overrides an object containing custom setTimeout and clearTimeout functions.
- * @returns a {@link HastyPromise}
+ * @param config an object containing a hurry$ signal and custom timeout API providing setTimeout and clearTimeout functions.
+ * @returns a Promise
  */
-export function sleep<T extends TimeoutIdentifier>(
-	ms: number,
-	overrides: SleepConfig<T>,
-): HastyPromise<void, Error | void>;
+export function sleep<T extends TimeoutIdentifier>(ms: number, config: SleepConfig<T>): Promise<void>;
 
 /**
  * Return a Promise that resolves after the specified delay.
  *
- * The returned Promise provides a `hurry` method that can
- * be used to resolve or reject early. Calling `hurry` without
- * any parameter will resolve the promise, while calling it with
- * an Error instance will reject it with the given Error.
- *
- * Note: although using setTimeout under the hood, you can pass a value greater than
- * its usual limit of 2147483647 (0x7fffffff, ~24.8 days). This implementation
- * will take care of huge values by using setTimeout multiple times if needed.
- *
  * Note: if the delay is 0 the returned Promise will be already resolved.
  *
  * @param ms a delay in milliseconds.
- * @returns a {@link HastyPromise}
+ * @returns a Promise
  */
-export function sleep(ms: number): HastyPromise<void, Error | void>;
-export function sleep(ms: number, overrides?: SleepConfig<TimeoutIdentifier>): HastyPromise<void, Error | void> {
+export function sleep(ms: number): Promise<void>;
+export function sleep(ms: number, config?: SleepConfig<TimeoutIdentifier>): Promise<void> {
 	const normalizedMs = Math.max(0, Math.ceil(ms));
 
-	const config = overrides
-		? overrides
+	const timeoutApi = config?.timeoutApi
+		? config.timeoutApi
 		: ({
 				setTimeout: patchedSetTimeout,
 				clearTimeout: patchedClearTimeout,
-		  } as SleepConfig<TimeoutIdentifier>);
+		  } as TimeoutAPI<TimeoutIdentifier>);
 
 	if (normalizedMs === 0) {
-		const promise = makeHastyPromise<void>((res) => {
+		const promise = new Promise<void>((res) => {
 			res();
 			return () => undefined;
 		});
@@ -95,23 +109,26 @@ export function sleep(ms: number, overrides?: SleepConfig<TimeoutIdentifier>): H
 
 	let id: TimeoutIdentifier | undefined;
 
-	const promise = makeHastyPromise<void, Error | void>((res, rej) => {
-		id = config.setTimeout(() => {
+	const promise = new Promise<void>((res, rej) => {
+		id = timeoutApi.setTimeout(() => {
 			id = undefined;
 			res();
 		}, normalizedMs);
 
-		return (reason) => {
-			if (id !== undefined) {
-				config.clearTimeout(id);
-				id = undefined;
-				if (reason !== undefined) {
-					rej(reason);
-				} else {
-					res();
+		if (config?.hurry$) {
+			const hurry$ = config.hurry$;
+			hurry$.subscribeOnce((reason) => {
+				if (id !== undefined) {
+					timeoutApi.clearTimeout(id);
+					id = undefined;
+					if (reason !== undefined) {
+						rej(reason);
+					} else {
+						res();
+					}
 				}
-			}
-		};
+			});
+		}
 	});
 
 	return promise;

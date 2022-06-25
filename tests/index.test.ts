@@ -2,6 +2,7 @@ import spies from 'chai-spies';
 import chaiAsPromised from 'chai-as-promised';
 import chai, {expect} from 'chai';
 import {sleep} from '../src/lib';
+import {makeSignal} from '@cdellacqua/signals';
 
 chai.use(chaiAsPromised);
 chai.use(spies);
@@ -16,11 +17,11 @@ describe('sleep', () => {
 			done();
 		}, 20);
 	});
-	it('tests the hurry method', (done) => {
+	it('tests hurry$ without rejecting', (done) => {
 		let actual = 0;
-		const sleepPromise = sleep(100);
-		setTimeout(() => sleepPromise.hurry(), 50);
-		sleepPromise.then(() => {
+		const hurry$ = makeSignal<void>();
+		setTimeout(() => hurry$.emit(), 50);
+		sleep(100, {hurry$}).then(() => {
 			actual = 1;
 		}, done);
 		setTimeout(() => {
@@ -30,13 +31,13 @@ describe('sleep', () => {
 	});
 	it('tests timeouts greater than the maximum allowed value accepted by setTimeout', (done) => {
 		let actual = 0;
-		const sleepPromise = sleep(0x7fffffff * 2);
-		sleepPromise.then(() => {
+		const hurry$ = makeSignal<void>();
+		sleep(0x7fffffff * 2, {hurry$}).then(() => {
 			actual = 1;
 		}, done);
 		setTimeout(() => {
 			expect(actual).to.eq(0);
-			sleepPromise.hurry();
+			hurry$.emit();
 			done();
 		}, 2);
 	});
@@ -55,8 +56,7 @@ describe('sleep', () => {
 	});
 	it('tests a delay of 0', (done) => {
 		let actual = 0;
-		const sleepPromise = sleep(0);
-		sleepPromise.then(() => {
+		sleep(0).then(() => {
 			actual = 1;
 		}, done);
 		setImmediate(() => {
@@ -65,18 +65,21 @@ describe('sleep', () => {
 		});
 	});
 	it('tests the hurry method on a delay of 0', async () => {
-		const sleepPromise = sleep(0);
-		expect(() => sleepPromise.hurry()).not.to.throw();
+		const hurry$ = makeSignal<void>();
+		const sleepPromise = sleep(0, {hurry$});
+		expect(() => hurry$.emit()).not.to.throw();
 		await expect(sleepPromise).to.eventually.not.be.rejected;
 	});
 	it('tests the hurry method passing an empty Error', async () => {
-		const sleepPromise = sleep(10);
-		sleepPromise.hurry(new Error());
+		const hurry$ = makeSignal<Error>();
+		const sleepPromise = sleep(10, {hurry$});
+		hurry$.emit(new Error());
 		await expect(sleepPromise).to.eventually.be.rejectedWith();
 	});
 	it('tests the hurry method passing an Error', async () => {
-		const sleepPromise = sleep(10);
-		sleepPromise.hurry(new Error('skip this!'));
+		const hurry$ = makeSignal<Error>();
+		const sleepPromise = sleep(10, {hurry$});
+		hurry$.emit(new Error('skip this!'));
 		await expect(sleepPromise).to.eventually.be.rejectedWith('skip this!');
 	});
 	it('tests an overridden sleep function', async () => {
@@ -84,14 +87,16 @@ describe('sleep', () => {
 		let set = 0;
 		let callback: (() => void) | undefined;
 		const sleepPromise = sleep(10, {
-			clearTimeout: () => {
-				cleared++;
-				callback = undefined;
-			},
-			setTimeout: (cb) => {
-				set++;
-				callback = cb;
-				return 0;
+			timeoutApi: {
+				clearTimeout: () => {
+					cleared++;
+					callback = undefined;
+				},
+				setTimeout: (cb) => {
+					set++;
+					callback = cb;
+					return 0;
+				},
 			},
 		});
 		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
@@ -113,15 +118,19 @@ describe('sleep', () => {
 		let cleared = 0;
 		let set = 0;
 		let callback: (() => void) | undefined;
+		const hurry$ = makeSignal<void>();
 		const sleepPromise = sleep(10, {
-			clearTimeout: () => {
-				cleared++;
-				callback = undefined;
-			},
-			setTimeout: (cb) => {
-				set++;
-				callback = cb;
-				return 0;
+			hurry$,
+			timeoutApi: {
+				clearTimeout: () => {
+					cleared++;
+					callback = undefined;
+				},
+				setTimeout: (cb) => {
+					set++;
+					callback = cb;
+					return 0;
+				},
 			},
 		});
 		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
@@ -130,7 +139,7 @@ describe('sleep', () => {
 			() => (state = 'rejected'),
 		);
 		expect(state).to.eq('pending');
-		sleepPromise.hurry();
+		hurry$.emit();
 		await sleep(0);
 		expect(state).to.eq('resolved');
 		expect(set).to.eq(1);
@@ -141,15 +150,19 @@ describe('sleep', () => {
 		let cleared = 0;
 		let set = 0;
 		let callback: (() => void) | undefined;
+		const hurry$ = makeSignal<Error>();
 		const sleepPromise = sleep(10, {
-			clearTimeout: () => {
-				cleared++;
-				callback = undefined;
-			},
-			setTimeout: (cb) => {
-				set++;
-				callback = cb;
-				return 0;
+			hurry$,
+			timeoutApi: {
+				clearTimeout: () => {
+					cleared++;
+					callback = undefined;
+				},
+				setTimeout: (cb) => {
+					set++;
+					callback = cb;
+					return 0;
+				},
 			},
 		});
 		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
@@ -158,7 +171,7 @@ describe('sleep', () => {
 			() => (state = 'rejected'),
 		);
 		expect(state).to.eq('pending');
-		sleepPromise.hurry(new Error());
+		hurry$.emit(new Error());
 		await sleep(0);
 		expect(state).to.eq('rejected');
 		expect(set).to.eq(1);

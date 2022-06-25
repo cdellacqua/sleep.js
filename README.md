@@ -42,9 +42,9 @@ Skip timeout after 500ms:
 import {sleep} from '@cdellacqua/sleep';
 
 async function example() {
-	const sleepPromise = sleep(1000);
-	setTimeout(() => sleepPromise.hurry(), 500);
-	await sleepPromise;
+	const hurry$ = makeSignal<void>();
+	setTimeout(() => hurry$.emit(), 500);
+	await sleep(1000, {hurry$});
 	console.log('see you in half a sec!');
 }
 ```
@@ -55,10 +55,10 @@ Abort timeout after 500ms, rejecting the promise:
 import {sleep} from '@cdellacqua/sleep';
 
 async function example() {
-	const sleepPromise = sleep(1000);
-	setTimeout(() => sleepPromise.hurry(new Error('ops!')), 500);
+	const hurry$ = makeSignal<void | Error>();
+	setTimeout(() => hurry$.emit(new Error('ops!')), 500);
 	try {
-		await sleepPromise;
+		await sleep(1000, {hurry$});
 	} catch (err) {
 		console.log('see you in half a sec!');
 	}
@@ -71,11 +71,12 @@ Use custom setTimeout/clearTimeout implementation:
 import {sleep} from '@cdellacqua/sleep';
 
 async function example() {
-	const sleepPromise = sleep(1000, {
-		setTimeout: (callback, ms) => setTimeout(callback, ms * 10),
-		clearTimeout: (timeoutId) => clearTimeout(timeoutId),
+	await sleep(1000, {
+		timeoutApi: {
+			setTimeout: (callback, ms) => setTimeout(callback, ms * 3),
+			clearTimeout: (timeoutId) => clearTimeout(timeoutId),
+		},
 	});
-	await sleepPromise;
-	console.log('see you in... 10 seconds?');
+	console.log('see you in... 3 seconds?');
 }
 ```

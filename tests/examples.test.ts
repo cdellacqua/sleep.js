@@ -1,3 +1,4 @@
+import {makeSignal} from '@cdellacqua/signals';
 import {expect} from 'chai';
 import {sleep} from '../src/lib/index';
 
@@ -27,9 +28,9 @@ describe('examples', () => {
 	it('readme 2', (done) => {
 		let actual = '';
 		(async () => {
-			const sleepPromise = sleep(100);
-			setTimeout(() => sleepPromise.hurry(), 50);
-			await sleepPromise;
+			const hurry$ = makeSignal<void>();
+			setTimeout(() => hurry$.emit(), 50);
+			await sleep(100, {hurry$});
 			actual = 'see you in half a sec!';
 		})().catch(done);
 		setTimeout(() => {
@@ -40,10 +41,10 @@ describe('examples', () => {
 	it('readme 3', (done) => {
 		let actual = '';
 		(async () => {
-			const sleepPromise = sleep(100);
-			setTimeout(() => sleepPromise.hurry(new Error('ops!')), 50);
+			const hurry$ = makeSignal<void | Error>();
+			setTimeout(() => hurry$.emit(new Error('ops!')), 50);
 			try {
-				await sleepPromise;
+				await sleep(100, {hurry$});
 			} catch (err) {
 				actual = 'see you in half a sec!';
 			}
@@ -56,11 +57,12 @@ describe('examples', () => {
 	it('readme 4', (done) => {
 		let actual = '';
 		(async () => {
-			const sleepPromise = sleep(10, {
-				setTimeout: (callback, ms) => setTimeout(callback, ms * 3),
-				clearTimeout: (timeoutId) => clearTimeout(timeoutId),
+			await sleep(10, {
+				timeoutApi: {
+					setTimeout: (callback, ms) => setTimeout(callback, ms * 3),
+					clearTimeout: (timeoutId) => clearTimeout(timeoutId),
+				},
 			});
-			await sleepPromise;
 			actual = 'see you in... 10 seconds?';
 		})().catch(done);
 		setTimeout(() => {
