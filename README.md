@@ -40,6 +40,7 @@ Skip timeout after 500ms:
 
 ```ts
 import {sleep} from '@cdellacqua/sleep';
+import {makeSignal} from '@cdellacqua/signals';
 
 async function example() {
 	const hurry$ = makeSignal<void>();
@@ -53,6 +54,7 @@ Abort timeout after 500ms, rejecting the promise:
 
 ```ts
 import {sleep} from '@cdellacqua/sleep';
+import {makeSignal} from '@cdellacqua/signals';
 
 async function example() {
 	const hurry$ = makeSignal<void | Error>();
