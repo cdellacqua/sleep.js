@@ -26,6 +26,37 @@ const patchedSetTimeout = (
 
 const patchedClearTimeout = (timeoutContext: TimeoutContext) => clearTimeout(timeoutContext.id);
 
+export type TimeoutIdentifier = string | number | boolean | symbol | bigint | object | null;
+
+export type SleepConfig<T extends TimeoutIdentifier> = {
+	setTimeout: (callback: () => void, ms: number) => T;
+	clearTimeout: (timeoutId: T) => void;
+};
+
+/**
+ * Return a Promise that resolves after the specified delay.
+ *
+ * The returned Promise provides a `hurry` method that can
+ * be used to resolve or reject early. Calling `hurry` without
+ * any parameter will resolve the promise, while calling it with
+ * an Error instance will reject it with the given Error.
+ *
+ * This overload takes an `overrides` object as its second parameter
+ * containing custom setTimeout and clearTimeout functions. This
+ * can be useful in tests or in scenarios where you would want
+ * to use more precise timing than what setTimeout can offer.
+ *
+ * Note: if the delay is 0 the returned Promise will be already resolved.
+ *
+ * @param ms a delay in milliseconds.
+ * @param overrides an object containing custom setTimeout and clearTimeout functions.
+ * @returns a {@link HastyPromise}
+ */
+export function sleep<T extends TimeoutIdentifier>(
+	ms: number,
+	overrides: SleepConfig<T>,
+): HastyPromise<void, Error | void>;
+
 /**
  * Return a Promise that resolves after the specified delay.
  *
@@ -43,8 +74,16 @@ const patchedClearTimeout = (timeoutContext: TimeoutContext) => clearTimeout(tim
  * @param ms a delay in milliseconds.
  * @returns a {@link HastyPromise}
  */
-export const sleep = (ms: number): HastyPromise<void, Error | void> => {
+export function sleep(ms: number): HastyPromise<void, Error | void>;
+export function sleep(ms: number, overrides?: SleepConfig<TimeoutIdentifier>): HastyPromise<void, Error | void> {
 	const normalizedMs = Math.max(0, Math.ceil(ms));
+
+	const config = overrides
+		? overrides
+		: ({
+				setTimeout: patchedSetTimeout,
+				clearTimeout: patchedClearTimeout,
+		  } as SleepConfig<TimeoutIdentifier>);
 
 	if (normalizedMs === 0) {
 		const promise = makeHastyPromise<void>((res) => {
@@ -54,17 +93,17 @@ export const sleep = (ms: number): HastyPromise<void, Error | void> => {
 		return promise;
 	}
 
-	let id: ReturnType<typeof patchedSetTimeout> | undefined;
+	let id: TimeoutIdentifier | undefined;
 
 	const promise = makeHastyPromise<void, Error | void>((res, rej) => {
-		id = patchedSetTimeout(() => {
+		id = config.setTimeout(() => {
 			id = undefined;
 			res();
 		}, normalizedMs);
 
 		return (reason) => {
 			if (id !== undefined) {
-				patchedClearTimeout(id);
+				config.clearTimeout(id);
 				id = undefined;
 				if (reason !== undefined) {
 					rej(reason);
@@ -76,4 +115,4 @@ export const sleep = (ms: number): HastyPromise<void, Error | void> => {
 	});
 
 	return promise;
-};
+}

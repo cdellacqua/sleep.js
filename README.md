@@ -64,3 +64,18 @@ async function example() {
 	}
 }
 ```
+
+Use custom setTimeout/clearTimeout implementation:
+
+```ts
+import {sleep} from '@cdellacqua/sleep';
+
+async function example() {
+	const sleepPromise = sleep(1000, {
+		setTimeout: (callback, ms) => setTimeout(callback, ms * 10),
+		clearTimeout: (timeoutId) => clearTimeout(timeoutId),
+	});
+	await sleepPromise;
+	console.log('see you in... 10 seconds?');
+}
+```

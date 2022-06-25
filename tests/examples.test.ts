@@ -11,7 +11,7 @@ describe('examples', () => {
 			done();
 		}, 20);
 	});
-	it('readme 2', (done) => {
+	it('readme 1/alt', (done) => {
 		let actual = '';
 
 		(async () => {
@@ -24,7 +24,7 @@ describe('examples', () => {
 			done();
 		}, 20);
 	});
-	it('readme 3', (done) => {
+	it('readme 2', (done) => {
 		let actual = '';
 		(async () => {
 			const sleepPromise = sleep(100);
@@ -52,5 +52,23 @@ describe('examples', () => {
 			expect(actual).to.eq('see you in half a sec!');
 			done();
 		}, 75);
+	});
+	it('readme 4', (done) => {
+		let actual = '';
+		(async () => {
+			const sleepPromise = sleep(10, {
+				setTimeout: (callback, ms) => setTimeout(callback, ms * 3),
+				clearTimeout: (timeoutId) => clearTimeout(timeoutId),
+			});
+			await sleepPromise;
+			actual = 'see you in... 10 seconds?';
+		})().catch(done);
+		setTimeout(() => {
+			expect(actual).to.not.eq('see you in... 10 seconds?');
+			setTimeout(() => {
+				expect(actual).to.eq('see you in... 10 seconds?');
+				done();
+			}, 22);
+		}, 10);
 	});
 });

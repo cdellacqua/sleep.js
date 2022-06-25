@@ -79,4 +79,90 @@ describe('sleep', () => {
 		sleepPromise.hurry(new Error('skip this!'));
 		await expect(sleepPromise).to.eventually.be.rejectedWith('skip this!');
 	});
+	it('tests an overridden sleep function', async () => {
+		let cleared = 0;
+		let set = 0;
+		let callback: (() => void) | undefined;
+		const sleepPromise = sleep(10, {
+			clearTimeout: () => {
+				cleared++;
+				callback = undefined;
+			},
+			setTimeout: (cb) => {
+				set++;
+				callback = cb;
+				return 0;
+			},
+		});
+		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
+		sleepPromise.then(
+			() => (state = 'resolved'),
+			() => (state = 'rejected'),
+		);
+		expect(state).to.eq('pending');
+		expect(cleared).to.eq(0);
+		expect(set).to.eq(1);
+		expect(callback).to.not.be.undefined;
+		callback?.();
+		await sleep(0);
+		expect(cleared).to.eq(0);
+		expect(set).to.eq(1);
+		expect(state).to.eq('resolved');
+	});
+	it('tests an overridden sleep function, hurrying it up', async () => {
+		let cleared = 0;
+		let set = 0;
+		let callback: (() => void) | undefined;
+		const sleepPromise = sleep(10, {
+			clearTimeout: () => {
+				cleared++;
+				callback = undefined;
+			},
+			setTimeout: (cb) => {
+				set++;
+				callback = cb;
+				return 0;
+			},
+		});
+		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
+		sleepPromise.then(
+			() => (state = 'resolved'),
+			() => (state = 'rejected'),
+		);
+		expect(state).to.eq('pending');
+		sleepPromise.hurry();
+		await sleep(0);
+		expect(state).to.eq('resolved');
+		expect(set).to.eq(1);
+		expect(cleared).to.eq(1);
+		expect(callback).to.be.undefined;
+	});
+	it('tests an overridden sleep function, hurrying it up with an error', async () => {
+		let cleared = 0;
+		let set = 0;
+		let callback: (() => void) | undefined;
+		const sleepPromise = sleep(10, {
+			clearTimeout: () => {
+				cleared++;
+				callback = undefined;
+			},
+			setTimeout: (cb) => {
+				set++;
+				callback = cb;
+				return 0;
+			},
+		});
+		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
+		sleepPromise.then(
+			() => (state = 'resolved'),
+			() => (state = 'rejected'),
+		);
+		expect(state).to.eq('pending');
+		sleepPromise.hurry(new Error());
+		await sleep(0);
+		expect(state).to.eq('rejected');
+		expect(set).to.eq(1);
+		expect(cleared).to.eq(1);
+		expect(callback).to.be.undefined;
+	});
 });
