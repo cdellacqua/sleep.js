@@ -43,7 +43,7 @@ import {sleep} from '@cdellacqua/sleep';
 
 async function example() {
 	const sleepPromise = sleep(1000);
-	setTimeout(() => sleepPromise.skip(), 500);
+	setTimeout(() => sleepPromise.hurry(), 500);
 	await sleepPromise;
 	console.log('see you in half a sec!');
 }
@@ -56,7 +56,7 @@ import {sleep} from '@cdellacqua/sleep';
 
 async function example() {
 	const sleepPromise = sleep(1000);
-	setTimeout(() => sleepPromise.abort('ops!'), 500);
+	setTimeout(() => sleepPromise.hurry(new Error('ops!')), 500);
 	try {
 		await sleepPromise;
 	} catch (err) {

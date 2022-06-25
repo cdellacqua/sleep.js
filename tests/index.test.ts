@@ -16,10 +16,10 @@ describe('sleep', () => {
 			done();
 		}, 20);
 	});
-	it('tests the skip method', (done) => {
+	it('tests the hurry method', (done) => {
 		let actual = 0;
 		const sleepPromise = sleep(100);
-		setTimeout(() => sleepPromise.skip(), 50);
+		setTimeout(() => sleepPromise.hurry(), 50);
 		sleepPromise.then(() => {
 			actual = 1;
 		}, done);
@@ -36,7 +36,7 @@ describe('sleep', () => {
 		}, done);
 		setTimeout(() => {
 			expect(actual).to.eq(0);
-			sleepPromise.skip();
+			sleepPromise.hurry();
 			done();
 		}, 2);
 	});
@@ -64,19 +64,19 @@ describe('sleep', () => {
 			done();
 		});
 	});
-	it('tests the skip method on a delay of 0', async () => {
+	it('tests the hurry method on a delay of 0', async () => {
 		const sleepPromise = sleep(0);
-		expect(() => sleepPromise.skip()).not.to.throw();
+		expect(() => sleepPromise.hurry()).not.to.throw();
 		await expect(sleepPromise).to.eventually.not.be.rejected;
 	});
-	it('tests the abort method', async () => {
+	it('tests the hurry method passing an empty Error', async () => {
 		const sleepPromise = sleep(10);
-		sleepPromise.abort();
+		sleepPromise.hurry(new Error());
 		await expect(sleepPromise).to.eventually.be.rejectedWith();
 	});
-	it('tests the abort method passing an error message', async () => {
+	it('tests the hurry method passing an Error', async () => {
 		const sleepPromise = sleep(10);
-		sleepPromise.abort('skip this!');
+		sleepPromise.hurry(new Error('skip this!'));
 		await expect(sleepPromise).to.eventually.be.rejectedWith('skip this!');
 	});
 });
