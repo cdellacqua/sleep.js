@@ -32,12 +32,12 @@ A configuration object for the `sleep` function.
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `hurry$?` | `ReadonlySignal`<`void` \| `Error`\> | A [ReadonlySignal](https://www.npmjs.com/package/@cdellacqua/signals) that can be used to resolve (or reject) the promise before the specified delay has passed.  Calling `emit` without any parameter will resolve the promise, while calling it with an Error instance will reject it with the passed Error. |
+| `signal?` | `AbortSignal` | An optional AbortSignal that can be used to cancel the sleep promise before its natural termination. |
 | `timeoutApi?` | [`TimeoutAPI`](README.md#timeoutapi)<`T`\> | A custom timeout API that provides setTimeout and clearTimeout. |
 
 #### Defined in
 
-[index.ts:45](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L45)
+[index.ts:43](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L43)
 
 ___
 
@@ -62,7 +62,7 @@ A basic timeout API must provide a setTimeout and a clearTimeout function.
 
 #### Defined in
 
-[index.ts:37](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L37)
+[index.ts:35](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L35)
 
 ___
 
@@ -74,7 +74,7 @@ Any viable type that may be used by a setTimeout implementation.
 
 #### Defined in
 
-[index.ts:32](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L32)
+[index.ts:30](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L30)
 
 ## Functions
 
@@ -86,14 +86,11 @@ Return a Promise that resolves after the specified delay.
 
 The second parameter is a `config` object that can contain a custom timeout API,
 providing setTimeout and clearTimeout functions,
-and a [ReadonlySignal](https://www.npmjs.com/package/@cdellacqua/signals) that can be used
+and an AbortSignal that can be used
 to cancel the sleep promise before its natural termination.
 
 Overriding the timeout API can be useful in tests or in scenarios where you would want
 to use more precise timing than what setTimeout can offer.
-
-Calling `emit` without any parameter will resolve the promise, while
-calling it with an Error instance will reject it with the passed Error.
 
 Note: if the delay is 0 the returned Promise will be already resolved.
 
@@ -108,7 +105,7 @@ Note: if the delay is 0 the returned Promise will be already resolved.
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `ms` | `number` | a delay in milliseconds. |
-| `config` | [`SleepConfig`](README.md#sleepconfig)<`T`\> | an object containing a hurry$ signal and custom timeout API providing setTimeout and clearTimeout functions. |
+| `config` | [`SleepConfig`](README.md#sleepconfig)<`T`\> | an object containing a signal and custom timeout API providing setTimeout and clearTimeout functions. |
 
 #### Returns
 
@@ -118,7 +115,7 @@ a Promise
 
 #### Defined in
 
-[index.ts:81](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L81)
+[index.ts:72](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L72)
 
 ▸ **sleep**(`ms`): `Promise`<`void`\>
 
@@ -140,4 +137,4 @@ a Promise
 
 #### Defined in
 
-[index.ts:91](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L91)
+[index.ts:82](https://github.com/cdellacqua/sleep.js/blob/main/src/lib/index.ts#L82)

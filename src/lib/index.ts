@@ -1,5 +1,3 @@
-import {ReadonlySignal} from '@cdellacqua/signals';
-
 const maxSupportedTimeout = 0x7fffffff;
 
 type TimeoutContext = {id: ReturnType<typeof setTimeout>};
@@ -44,14 +42,10 @@ export type TimeoutAPI<T extends TimeoutIdentifier> = {
  */
 export type SleepConfig<T extends TimeoutIdentifier> = {
 	/**
-	 * A [ReadonlySignal](https://www.npmjs.com/package/@cdellacqua/signals)
-	 * that can be used to resolve (or reject) the promise before the specified
-	 * delay has passed.
-	 *
-	 * Calling `emit` without any parameter will resolve the promise, while
-	 * calling it with an Error instance will reject it with the passed Error.
+	 * An optional AbortSignal that can be used
+	 * to cancel (by rejecting with the abort reason) the sleep promise before its natural termination.
 	 */
-	hurry$?: ReadonlySignal<void | Error>;
+	signal?: AbortSignal;
 	/**
 	 * A custom timeout API that provides setTimeout and clearTimeout.
 	 */
@@ -63,19 +57,16 @@ export type SleepConfig<T extends TimeoutIdentifier> = {
  *
  * The second parameter is a `config` object that can contain a custom timeout API,
  * providing setTimeout and clearTimeout functions,
- * and a [ReadonlySignal](https://www.npmjs.com/package/@cdellacqua/signals) that can be used
- * to cancel the sleep promise before its natural termination.
+ * and an AbortSignal that can be used
+ * to cancel (by rejecting with the abort reason) the sleep promise before its natural termination.
  *
  * Overriding the timeout API can be useful in tests or in scenarios where you would want
  * to use more precise timing than what setTimeout can offer.
  *
- * Calling `emit` without any parameter will resolve the promise, while
- * calling it with an Error instance will reject it with the passed Error.
- *
  * Note: if the delay is 0 the returned Promise will be already resolved.
  *
  * @param ms a delay in milliseconds.
- * @param config an object containing a hurry$ signal and custom timeout API providing setTimeout and clearTimeout functions.
+ * @param config an object containing a signal and custom timeout API providing setTimeout and clearTimeout functions.
  * @returns a Promise
  */
 export function sleep<T extends TimeoutIdentifier>(ms: number, config: SleepConfig<T>): Promise<void>;
@@ -99,12 +90,11 @@ export function sleep(ms: number, config?: SleepConfig<TimeoutIdentifier>): Prom
 				clearTimeout: patchedClearTimeout,
 		  } as TimeoutAPI<TimeoutIdentifier>);
 
+	if (config?.signal?.aborted) {
+		return Promise.reject(config.signal.reason);
+	}
 	if (normalizedMs === 0) {
-		const promise = new Promise<void>((res) => {
-			res();
-			return () => undefined;
-		});
-		return promise;
+		return Promise.resolve();
 	}
 
 	let id: TimeoutIdentifier | undefined;
@@ -115,17 +105,13 @@ export function sleep(ms: number, config?: SleepConfig<TimeoutIdentifier>): Prom
 			res();
 		}, normalizedMs);
 
-		if (config?.hurry$) {
-			const hurry$ = config.hurry$;
-			hurry$.subscribeOnce((reason) => {
+		if (config?.signal) {
+			const signal = config.signal;
+			signal.addEventListener('abort', () => {
 				if (id !== undefined) {
 					timeoutApi.clearTimeout(id);
 					id = undefined;
-					if (reason !== undefined) {
-						rej(reason);
-					} else {
-						res();
-					}
+					rej(signal.reason);
 				}
 			});
 		}

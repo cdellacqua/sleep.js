@@ -1,4 +1,3 @@
-import {makeSignal} from '@cdellacqua/signals';
 import {expect} from 'chai';
 import {sleep} from '../src/lib/index';
 
@@ -28,9 +27,8 @@ describe('examples', () => {
 	it('readme 2', (done) => {
 		let actual = '';
 		(async () => {
-			const hurry$ = makeSignal<void>();
-			setTimeout(() => hurry$.emit(), 50);
-			await sleep(100, {hurry$});
+			// eslint-disable-next-line @typescript-eslint/no-empty-function
+			await sleep(100, {signal: AbortSignal.timeout(50)}).catch(() => {});
 			actual = 'see you in half a sec!';
 		})().catch(done);
 		setTimeout(() => {
@@ -41,10 +39,8 @@ describe('examples', () => {
 	it('readme 3', (done) => {
 		let actual = '';
 		(async () => {
-			const hurry$ = makeSignal<void | Error>();
-			setTimeout(() => hurry$.emit(new Error('ops!')), 50);
 			try {
-				await sleep(100, {hurry$});
+				await sleep(100, {signal: AbortSignal.timeout(50)});
 			} catch (err) {
 				actual = 'see you in half a sec!';
 			}
@@ -55,6 +51,41 @@ describe('examples', () => {
 		}, 75);
 	});
 	it('readme 4', (done) => {
+		let actual = '';
+		(async () => {
+			const controller = new AbortController();
+			setTimeout(() => {
+				controller.abort();
+			}, 25);
+			try {
+				await sleep(50, {signal: controller.signal});
+				actual = 'nobody clicked within 1 second!';
+			} catch (err) {
+				actual = 'somebody clicked within 1 second!';
+			}
+		})().catch(done);
+		setTimeout(() => {
+			expect(actual).to.eq('somebody clicked within 1 second!');
+			done();
+		}, 75);
+	});
+	it('readme 4/alt', (done) => {
+		let actual = '';
+		(async () => {
+			const controller = new AbortController();
+			try {
+				await sleep(50, {signal: controller.signal});
+				actual = 'nobody clicked within 1 second!';
+			} catch (err) {
+				actual = 'somebody clicked within 1 second!';
+			}
+		})().catch(done);
+		setTimeout(() => {
+			expect(actual).to.eq('nobody clicked within 1 second!');
+			done();
+		}, 75);
+	});
+	it('readme 5', (done) => {
 		let actual = '';
 		(async () => {
 			await sleep(10, {

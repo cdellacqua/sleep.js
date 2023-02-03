@@ -36,33 +36,47 @@ async function example() {
 }
 ```
 
-Skip timeout after 500ms:
-
-```ts
-import {sleep} from '@cdellacqua/sleep';
-import {makeSignal} from '@cdellacqua/signals';
-
-async function example() {
-	const hurry$ = makeSignal<void>();
-	setTimeout(() => hurry$.emit(), 500);
-	await sleep(1000, {hurry$});
-	console.log('see you in half a sec!');
-}
-```
-
 Abort timeout after 500ms, rejecting the promise:
 
 ```ts
 import {sleep} from '@cdellacqua/sleep';
-import {makeSignal} from '@cdellacqua/signals';
 
 async function example() {
-	const hurry$ = makeSignal<void | Error>();
-	setTimeout(() => hurry$.emit(new Error('ops!')), 500);
 	try {
-		await sleep(1000, {hurry$});
+		await sleep(1000, {signal: AbortSignal.timeout(500)});
 	} catch (err) {
 		console.log('see you in half a sec!');
+	}
+}
+```
+
+Skip timeout after 500ms:
+
+```ts
+import {sleep} from '@cdellacqua/sleep';
+
+async function example() {
+	// Note the `.catch(...)`!
+	await sleep(1000, {signal: AbortSignal.timeout(500)}).catch(() => {});
+	console.log('see you in half a sec!');
+}
+```
+
+Abort timeout when an event happens, rejecting the promise:
+
+```ts
+import {sleep} from '@cdellacqua/sleep';
+
+async function example() {
+	const controller = new AbortController();
+	window.addEventListener('click', () => {
+		controller.abort();
+	});
+	try {
+		await sleep(1000, {signal: controller.signal});
+		console.log('nobody clicked within 1 second!');
+	} catch (err) {
+		console.log('somebody clicked within 1 second!');
 	}
 }
 ```

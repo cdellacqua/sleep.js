@@ -2,7 +2,6 @@ import spies from 'chai-spies';
 import chaiAsPromised from 'chai-as-promised';
 import chai, {expect} from 'chai';
 import {sleep} from '../src/lib';
-import {makeSignal} from '@cdellacqua/signals';
 
 chai.use(chaiAsPromised);
 chai.use(spies);
@@ -17,13 +16,42 @@ describe('sleep', () => {
 			done();
 		}, 20);
 	});
-	it('tests hurry$ without rejecting', (done) => {
+	it('tests that it immediately rejects when called with an already aborted signal and a zero timeout', (done) => {
+		const controller = new AbortController();
+		const testError = new Error('test-error');
+		controller.abort(testError);
+		sleep(0, {signal: controller.signal})
+			.then(() => done('promise should have rejected!'))
+			.catch((err) => {
+				expect(err).to.eq(testError);
+				done();
+			});
+	});
+	it('tests that it immediately rejects when called with an already aborted signal', (done) => {
+		const controller = new AbortController();
+		const testError = new Error('test-error');
+		controller.abort(testError);
+		sleep(10, {signal: controller.signal})
+			.then(() => done('promise should have rejected!'))
+			.catch((err) => {
+				expect(err).to.eq(testError);
+				done();
+			});
+	});
+	it('tests the abort signal', (done) => {
 		let actual = 0;
-		const hurry$ = makeSignal<void>();
-		setTimeout(() => hurry$.emit(), 50);
-		sleep(100, {hurry$}).then(() => {
-			actual = 1;
-		}, done);
+		const controller = new AbortController();
+		setTimeout(() => {
+			controller.abort();
+		}, 50);
+		sleep(100, {signal: controller.signal}).then(
+			() => {
+				done('promise should have rejected');
+			},
+			() => {
+				actual = 1;
+			},
+		);
 		setTimeout(() => {
 			expect(actual).to.eq(1);
 			done();
@@ -31,13 +59,18 @@ describe('sleep', () => {
 	});
 	it('tests timeouts greater than the maximum allowed value accepted by setTimeout', (done) => {
 		let actual = 0;
-		const hurry$ = makeSignal<void>();
-		sleep(0x7fffffff * 2, {hurry$}).then(() => {
-			actual = 1;
-		}, done);
+		const controller = new AbortController();
+		sleep(0x7fffffff * 2, {signal: controller.signal}).then(
+			() => {
+				done('promise should have rejected');
+			},
+			() => {
+				actual = 1;
+			},
+		);
 		setTimeout(() => {
 			expect(actual).to.eq(0);
-			hurry$.emit();
+			controller.abort();
 			done();
 		}, 2);
 	});
@@ -64,22 +97,10 @@ describe('sleep', () => {
 			done();
 		});
 	});
-	it('tests the hurry method on a delay of 0', async () => {
-		const hurry$ = makeSignal<void>();
-		const sleepPromise = sleep(0, {hurry$});
-		expect(() => hurry$.emit()).not.to.throw();
-		await expect(sleepPromise).to.eventually.not.be.rejected;
-	});
-	it('tests the hurry method passing an empty Error', async () => {
-		const hurry$ = makeSignal<Error>();
-		const sleepPromise = sleep(10, {hurry$});
-		hurry$.emit(new Error());
-		await expect(sleepPromise).to.eventually.be.rejectedWith();
-	});
 	it('tests the hurry method passing an Error', async () => {
-		const hurry$ = makeSignal<Error>();
-		const sleepPromise = sleep(10, {hurry$});
-		hurry$.emit(new Error('skip this!'));
+		const controller = new AbortController();
+		const sleepPromise = sleep(10, {signal: controller.signal});
+		controller.abort(new Error('skip this!'));
 		await expect(sleepPromise).to.eventually.be.rejectedWith('skip this!');
 	});
 	it('tests an overridden sleep function', async () => {
@@ -114,45 +135,13 @@ describe('sleep', () => {
 		expect(set).to.eq(1);
 		expect(state).to.eq('resolved');
 	});
-	it('tests an overridden sleep function, hurrying it up', async () => {
-		let cleared = 0;
-		let set = 0;
-		let callback: (() => void) | undefined;
-		const hurry$ = makeSignal<void>();
-		const sleepPromise = sleep(10, {
-			hurry$,
-			timeoutApi: {
-				clearTimeout: () => {
-					cleared++;
-					callback = undefined;
-				},
-				setTimeout: (cb) => {
-					set++;
-					callback = cb;
-					return 0;
-				},
-			},
-		});
-		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
-		sleepPromise.then(
-			() => (state = 'resolved'),
-			() => (state = 'rejected'),
-		);
-		expect(state).to.eq('pending');
-		hurry$.emit();
-		await sleep(0);
-		expect(state).to.eq('resolved');
-		expect(set).to.eq(1);
-		expect(cleared).to.eq(1);
-		expect(callback).to.be.undefined;
-	});
 	it('tests an overridden sleep function, hurrying it up with an error', async () => {
 		let cleared = 0;
 		let set = 0;
 		let callback: (() => void) | undefined;
-		const hurry$ = makeSignal<Error>();
+		const controller = new AbortController();
 		const sleepPromise = sleep(10, {
-			hurry$,
+			signal: controller.signal,
 			timeoutApi: {
 				clearTimeout: () => {
 					cleared++;
@@ -171,7 +160,7 @@ describe('sleep', () => {
 			() => (state = 'rejected'),
 		);
 		expect(state).to.eq('pending');
-		hurry$.emit(new Error());
+		controller.abort(new Error());
 		await sleep(0);
 		expect(state).to.eq('rejected');
 		expect(set).to.eq(1);
