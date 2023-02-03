@@ -32,7 +32,7 @@ A configuration object for the `sleep` function.
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `signal?` | `AbortSignal` | An optional AbortSignal that can be used to cancel the sleep promise before its natural termination. |
+| `signal?` | `AbortSignal` | An optional AbortSignal that can be used to cancel (by rejecting with the abort reason) the sleep promise before its natural termination. |
 | `timeoutApi?` | [`TimeoutAPI`](README.md#timeoutapi)<`T`\> | A custom timeout API that provides setTimeout and clearTimeout. |
 
 #### Defined in
@@ -87,7 +87,7 @@ Return a Promise that resolves after the specified delay.
 The second parameter is a `config` object that can contain a custom timeout API,
 providing setTimeout and clearTimeout functions,
 and an AbortSignal that can be used
-to cancel the sleep promise before its natural termination.
+to cancel (by rejecting with the abort reason) the sleep promise before its natural termination.
 
 Overriding the timeout API can be useful in tests or in scenarios where you would want
 to use more precise timing than what setTimeout can offer.
