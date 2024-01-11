@@ -2,7 +2,7 @@
 	"name": "@cdellacqua/sleep",
 	"camelCaseName": "sleep",
 	"description": "Delay execution using Promises.",
-	"version": "6.0.0",
+	"version": "6.0.1",
 	"type": "module",
 	"types": "dist/index.d.ts",
 	"main": "dist/index.cjs",
@@ -27,7 +27,7 @@
 	],
 	"exports": {
 		".": {
-      "types": "./dist/index.d.ts",
+			"types": "./dist/index.d.ts",
 			"import": "./dist/index.es.js",
 			"require": "./dist/index.cjs"
 		},
