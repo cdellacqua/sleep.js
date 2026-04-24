@@ -20,7 +20,8 @@
 		"setTimeout"
 	],
 	"repository": {
-		"url": "git+https://github.com/cdellacqua/sleep.js"
+		"type": "git",
+		"url": "git+https://github.com/cdellacqua/sleep.js.git"
 	},
 	"bugs": {
 		"url": "https://github.com/cdellacqua/sleep.js/issues"
