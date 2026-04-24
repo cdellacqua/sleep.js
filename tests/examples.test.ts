@@ -1,58 +1,52 @@
-import {expect} from 'chai';
-import {sleep} from '../src/lib/index';
+import {sleep} from '../src/lib/index.js';
+
+function wait(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 describe('examples', () => {
-	it('readme 1', (done) => {
+	it('readme 1', async () => {
 		let actual = '';
-		sleep(10).then(() => (actual = 'see you in a sec!'), done);
+		const promise = sleep(10).then(() => (actual = 'see you in a sec!'));
 		expect(actual).to.eq('');
-		setTimeout(() => {
-			expect(actual).to.eq('see you in a sec!');
-			done();
-		}, 20);
+		await wait(20);
+		await promise;
+		expect(actual).to.eq('see you in a sec!');
 	});
-	it('readme 1/alt', (done) => {
+	it('readme 1/alt', async () => {
 		let actual = '';
 
-		(async () => {
+		const promise = (async () => {
 			await sleep(10);
 			expect(actual).to.eq('');
 			actual = 'see you in a sec!';
-		})().catch(done);
-		setTimeout(() => {
-			expect(actual).to.eq('see you in a sec!');
-			done();
-		}, 20);
+		})();
+		await wait(20);
+		await promise;
+		expect(actual).to.eq('see you in a sec!');
 	});
-	it('readme 2', (done) => {
+	it('readme 2', async () => {
 		let actual = '';
-		(async () => {
-			// eslint-disable-next-line @typescript-eslint/no-empty-function
+		await (async () => {
 			await sleep(100, {signal: AbortSignal.timeout(50)}).catch(() => {});
 			actual = 'see you in half a sec!';
-		})().catch(done);
-		setTimeout(() => {
-			expect(actual).to.eq('see you in half a sec!');
-			done();
-		}, 75);
+		})();
+		expect(actual).to.eq('see you in half a sec!');
 	});
-	it('readme 3', (done) => {
+	it('readme 3', async () => {
 		let actual = '';
-		(async () => {
+		await (async () => {
 			try {
 				await sleep(100, {signal: AbortSignal.timeout(50)});
-			} catch (err) {
+			} catch {
 				actual = 'see you in half a sec!';
 			}
-		})().catch(done);
-		setTimeout(() => {
-			expect(actual).to.eq('see you in half a sec!');
-			done();
-		}, 75);
+		})();
+		expect(actual).to.eq('see you in half a sec!');
 	});
-	it('readme 4', (done) => {
+	it('readme 4', async () => {
 		let actual = '';
-		(async () => {
+		await (async () => {
 			const controller = new AbortController();
 			setTimeout(() => {
 				controller.abort();
@@ -60,34 +54,28 @@ describe('examples', () => {
 			try {
 				await sleep(50, {signal: controller.signal});
 				actual = 'nobody clicked within 1 second!';
-			} catch (err) {
+			} catch {
 				actual = 'somebody clicked within 1 second!';
 			}
-		})().catch(done);
-		setTimeout(() => {
-			expect(actual).to.eq('somebody clicked within 1 second!');
-			done();
-		}, 75);
+		})();
+		expect(actual).to.eq('somebody clicked within 1 second!');
 	});
-	it('readme 4/alt', (done) => {
+	it('readme 4/alt', async () => {
 		let actual = '';
-		(async () => {
+		await (async () => {
 			const controller = new AbortController();
 			try {
 				await sleep(50, {signal: controller.signal});
 				actual = 'nobody clicked within 1 second!';
-			} catch (err) {
+			} catch {
 				actual = 'somebody clicked within 1 second!';
 			}
-		})().catch(done);
-		setTimeout(() => {
-			expect(actual).to.eq('nobody clicked within 1 second!');
-			done();
-		}, 75);
+		})();
+		expect(actual).to.eq('nobody clicked within 1 second!');
 	});
-	it('readme 5', (done) => {
+	it('readme 5', async () => {
 		let actual = '';
-		(async () => {
+		const promise = (async () => {
 			await sleep(10, {
 				timeoutApi: {
 					setTimeout: (callback, ms) => setTimeout(callback, ms * 3),
@@ -95,13 +83,11 @@ describe('examples', () => {
 				},
 			});
 			actual = 'see you in... 10 seconds?';
-		})().catch(done);
-		setTimeout(() => {
-			expect(actual).to.not.eq('see you in... 10 seconds?');
-			setTimeout(() => {
-				expect(actual).to.eq('see you in... 10 seconds?');
-				done();
-			}, 22);
-		}, 10);
+		})();
+		await wait(10);
+		expect(actual).to.not.eq('see you in... 10 seconds?');
+		await wait(22);
+		await promise;
+		expect(actual).to.eq('see you in... 10 seconds?');
 	});
 });

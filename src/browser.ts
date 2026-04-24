@@ -1,5 +1,5 @@
 import './style.css';
-import {sleep} from './lib';
+import {sleep} from './lib/index.js';
 
 const appDiv = document.getElementById('app') as HTMLDivElement;
 

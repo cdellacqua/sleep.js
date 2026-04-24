@@ -1,4 +1,4 @@
-import {sleep} from './lib';
+import {sleep} from './lib/index.js';
 
 console.log('waiting one second...');
 sleep(1000).then(() => {

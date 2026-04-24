@@ -1,107 +1,85 @@
-import spies from 'chai-spies';
-import chaiAsPromised from 'chai-as-promised';
-import chai, {expect} from 'chai';
-import {sleep} from '../src/lib';
+import {vi} from 'vitest';
+import {sleep} from '../src/lib/index.js';
 
-chai.use(chaiAsPromised);
-chai.use(spies);
+function wait(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 describe('sleep', () => {
-	it('tests a basic usage', (done) => {
+	it('tests a basic usage', async () => {
 		let actual = 0;
-		sleep(10).then(() => (actual = 1), done);
+		const promise = sleep(10).then(() => (actual = 1));
 		expect(actual).to.eq(0);
-		setTimeout(() => {
-			expect(actual).to.eq(1);
-			done();
-		}, 20);
+		await wait(20);
+		await promise;
+		expect(actual).to.eq(1);
 	});
-	it('tests that it immediately rejects when called with an already aborted signal and a zero timeout', (done) => {
+	it('tests that it immediately rejects when called with an already aborted signal and a zero timeout', async () => {
 		const controller = new AbortController();
 		const testError = new Error('test-error');
 		controller.abort(testError);
-		sleep(0, {signal: controller.signal})
-			.then(() => done('promise should have rejected!'))
-			.catch((err) => {
-				expect(err).to.eq(testError);
-				done();
-			});
+		await expect(sleep(0, {signal: controller.signal})).rejects.toBe(testError);
 	});
-	it('tests that it immediately rejects when called with an already aborted signal', (done) => {
+	it('tests that it immediately rejects when called with an already aborted signal', async () => {
 		const controller = new AbortController();
 		const testError = new Error('test-error');
 		controller.abort(testError);
-		sleep(10, {signal: controller.signal})
-			.then(() => done('promise should have rejected!'))
-			.catch((err) => {
-				expect(err).to.eq(testError);
-				done();
-			});
+		await expect(sleep(10, {signal: controller.signal})).rejects.toBe(testError);
 	});
-	it('tests the abort signal', (done) => {
+	it('tests the abort signal', async () => {
 		let actual = 0;
 		const controller = new AbortController();
 		setTimeout(() => {
 			controller.abort();
 		}, 50);
-		sleep(100, {signal: controller.signal}).then(
-			() => {
-				done('promise should have rejected');
-			},
-			() => {
-				actual = 1;
-			},
-		);
-		setTimeout(() => {
-			expect(actual).to.eq(1);
-			done();
-		}, 75);
+		const promise = sleep(100, {signal: controller.signal}).catch(() => {
+			actual = 1;
+		});
+		await wait(75);
+		await promise;
+		expect(actual).to.eq(1);
 	});
-	it('tests timeouts greater than the maximum allowed value accepted by setTimeout', (done) => {
+	it('tests timeouts greater than the maximum allowed value accepted by setTimeout', async () => {
 		let actual = 0;
 		const controller = new AbortController();
-		sleep(0x7fffffff * 2, {signal: controller.signal}).then(
-			() => {
-				done('promise should have rejected');
-			},
-			() => {
-				actual = 1;
-			},
-		);
-		setTimeout(() => {
-			expect(actual).to.eq(0);
-			controller.abort();
-			done();
-		}, 2);
+		const promise = sleep(0x7fffffff * 2, {signal: controller.signal}).catch(() => {
+			actual = 1;
+		});
+		await wait(2);
+		expect(actual).to.eq(0);
+		controller.abort();
+		await promise;
 	});
-	it('tests that setTimeouts gets called multiple times when using a huge delay', (done) => {
+	it('tests that setTimeouts gets called multiple times when using a huge delay', async () => {
 		const setTimeoutArgs: number[] = [];
 
-		const setTimeoutSandbox = chai.spy.sandbox();
-		setTimeoutSandbox.on(globalThis, 'setTimeout', (callback, ms, ...params) => {
-			setTimeoutArgs.push(ms);
-			callback(...params);
-		});
-		sleep(0x7fffffff * 3 + 10).catch(done);
+		const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout').mockImplementation(
+			((callback: TimerHandler, ms?: number, ...params: unknown[]) => {
+				setTimeoutArgs.push(Number(ms));
+				if (typeof callback === 'function') {
+					callback(...params);
+				}
+				return 0 as unknown as ReturnType<typeof setTimeout>;
+			}) as unknown as typeof setTimeout,
+		);
+		await sleep(0x7fffffff * 3 + 10);
 		expect(setTimeoutArgs).to.eqls([0x7fffffff, 0x7fffffff, 0x7fffffff, 10]);
-		setTimeoutSandbox.restore();
-		done();
+		setTimeoutSpy.mockRestore();
 	});
-	it('tests a delay of 0', (done) => {
+	it('tests a delay of 0', async () => {
 		let actual = 0;
-		sleep(0).then(() => {
+		const promise = sleep(0).then(() => {
 			actual = 1;
-		}, done);
-		setImmediate(() => {
-			expect(actual).to.eq(1);
-			done();
 		});
+		await new Promise<void>((resolve) => setImmediate(resolve));
+		await promise;
+		expect(actual).to.eq(1);
 	});
 	it('tests the hurry method passing an Error', async () => {
 		const controller = new AbortController();
 		const sleepPromise = sleep(10, {signal: controller.signal});
 		controller.abort(new Error('skip this!'));
-		await expect(sleepPromise).to.eventually.be.rejectedWith('skip this!');
+		await expect(sleepPromise).rejects.toThrow('skip this!');
 	});
 	it('tests an overridden sleep function', async () => {
 		let cleared = 0;
@@ -121,7 +99,7 @@ describe('sleep', () => {
 			},
 		});
 		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
-		sleepPromise.then(
+		void sleepPromise.then(
 			() => (state = 'resolved'),
 			() => (state = 'rejected'),
 		);
@@ -155,7 +133,7 @@ describe('sleep', () => {
 			},
 		});
 		let state: 'pending' | 'resolved' | 'rejected' = 'pending';
-		sleepPromise.then(
+		void sleepPromise.then(
 			() => (state = 'resolved'),
 			() => (state = 'rejected'),
 		);
